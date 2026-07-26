@@ -8,6 +8,7 @@ interface Props { open: boolean; file: StoredFile | null; loading?: boolean; onC
 export function ShareModal({ open, file, loading, onClose, onConfirm }: Props) {
   const [email, setEmail] = useState("");
   const [permission, setPermission] = useState<SharePermission>("READ");
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { setEmail(""); setPermission("READ"); }, [open]);
   return <Modal title={`Compartilhar ${file?.name ?? "arquivo"}`} open={open} onClose={onClose}><form className="modal-form" onSubmit={(event) => { event.preventDefault(); onConfirm(email.trim(), permission); }}><label>E-mail do destinatário<input type="email" required autoFocus value={email} onChange={(event) => setEmail(event.target.value)} placeholder="usuario@exemplo.com" /></label><label>Permissão<select value={permission} onChange={(event) => setPermission(event.target.value as SharePermission)}><option value="READ">Leitura</option><option value="EDIT">Edição</option></select></label><footer><Button type="button" variant="ghost" onClick={onClose}>Cancelar</Button><Button type="submit" disabled={!email.trim() || loading}>{loading ? "Compartilhando..." : "Compartilhar"}</Button></footer></form></Modal>;
 }

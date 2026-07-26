@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useMemo, useRef, useState, type ReactNode } from "react";
 import { driveService } from "@/services/driveService";
 import type { Folder, StoredFile } from "@/types/api";
 
@@ -13,6 +13,7 @@ interface DriveContextValue {
   currentFolderId: string | null;
   breadcrumbs: BreadcrumbItem[];
   loading: boolean;
+  error: string | null;
   loadCurrentFolder: () => Promise<void>;
   openFolder: (folder: Folder) => void;
   navigateToBreadcrumb: (index: number) => void;
@@ -26,19 +27,29 @@ export function DriveProvider({ children }: { children: ReactNode }) {
   const [files, setFiles] = useState<StoredFile[]>([]);
   const [breadcrumbs, setBreadcrumbs] = useState<BreadcrumbItem[]>([{ id: null, name: "Meu Drive" }]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const requestId = useRef(0);
   const currentFolderId = breadcrumbs.at(-1)?.id ?? null;
 
   const loadCurrentFolder = useCallback(async () => {
+    const currentRequest = ++requestId.current;
+    const folderId = currentFolderId;
     setLoading(true);
+    setError(null);
     try {
       const [folderData, fileData] = await Promise.all([
-        driveService.listFolders(currentFolderId),
-        driveService.listFiles(currentFolderId),
+        driveService.listFolders(folderId),
+        driveService.listFiles(folderId),
       ]);
-      setFolders(folderData);
-      setFiles(fileData);
+      if (currentRequest === requestId.current) {
+        setFolders(folderData);
+        setFiles(fileData);
+      }
+    } catch (loadError) {
+      if (currentRequest === requestId.current) setError(loadError instanceof Error ? loadError.message : "Não foi possível carregar os arquivos.");
+      throw loadError;
     } finally {
-      setLoading(false);
+      if (currentRequest === requestId.current) setLoading(false);
     }
   }, [currentFolderId]);
 
@@ -54,7 +65,7 @@ export function DriveProvider({ children }: { children: ReactNode }) {
     setBreadcrumbs([{ id: null, name: "Meu Drive" }]);
   }, []);
 
-  const value = useMemo(() => ({ folders, files, currentFolderId, breadcrumbs, loading, loadCurrentFolder, openFolder, navigateToBreadcrumb, resetNavigation }), [folders, files, currentFolderId, breadcrumbs, loading, loadCurrentFolder, openFolder, navigateToBreadcrumb, resetNavigation]);
+  const value = useMemo(() => ({ folders, files, currentFolderId, breadcrumbs, loading, error, loadCurrentFolder, openFolder, navigateToBreadcrumb, resetNavigation }), [folders, files, currentFolderId, breadcrumbs, loading, error, loadCurrentFolder, openFolder, navigateToBreadcrumb, resetNavigation]);
 
   return <DriveContext.Provider value={value}>{children}</DriveContext.Provider>;
 }

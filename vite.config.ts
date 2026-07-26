@@ -9,6 +9,7 @@ export default defineConfig({
       "@": fileURLToPath(new URL("./src", import.meta.url)),
     },
   },
+  // @ts-expect-error Vitest reads this extension from the shared Vite config.
   test: {
     environment: "jsdom",
     globals: true,
