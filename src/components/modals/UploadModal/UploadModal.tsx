@@ -13,6 +13,7 @@ type UploadItem = { id: string; file: File; previewUrl?: string; status: UploadS
 
 interface Props {
   open: boolean;
+  initialFiles?: File[];
   onClose: () => void;
   onConfirm: (file: File, onProgress: UploadProgressHandler) => Promise<void>;
   onComplete?: (successfulCount: number, failedCount: number) => Promise<void>;
@@ -21,7 +22,7 @@ interface Props {
 const getFileId = (file: File) => `${file.name}-${file.size}-${file.lastModified}`;
 const isImage = (file: File) => file.type.startsWith("image/");
 
-export function UploadModal({ open, onClose, onConfirm, onComplete }: Props) {
+export function UploadModal({ open, initialFiles = [], onClose, onConfirm, onComplete }: Props) {
   const [items, setItems] = useState<UploadItem[]>([]);
   const [dragActive, setDragActive] = useState(false);
   const [message, setMessage] = useState("");
@@ -51,6 +52,10 @@ export function UploadModal({ open, onClose, onConfirm, onComplete }: Props) {
     if (accepted.length) setItems((current) => [...current, ...accepted]);
     setMessage(duplicateCount ? `${duplicateCount} arquivo(s) duplicado(s) não foram adicionados.` : "");
   };
+
+  // The effect imports files dropped on the screen into the local queue.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { if (open && initialFiles.length) addFiles(initialFiles); }, [open, initialFiles]);
 
   const removeFile = (id: string) => {
     if (busy) return;

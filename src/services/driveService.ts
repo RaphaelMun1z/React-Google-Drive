@@ -1,6 +1,16 @@
 import type { Folder, SharePermission, StoredFile } from "@/types/api";
 import { http } from "@/services/http";
 
+export type FilePreviewResult = {
+  blob: Blob;
+  contentType: string;
+  contentLength?: number;
+  contentRange?: string;
+  acceptRanges?: string;
+  etag?: string;
+  lastModified?: string;
+};
+
 export const driveService = {
   async listFolders(parentFolderId: string | null) {
     const { data } = await http.get<Folder[]>("/api/pastas", {
@@ -71,5 +81,23 @@ export const driveService = {
     anchor.click();
     anchor.remove();
     URL.revokeObjectURL(url);
+  },
+
+  async previewFile(fileId: string, signal?: AbortSignal, range?: string): Promise<FilePreviewResult> {
+    const response = await http.get<Blob>(`/api/arquivos/${fileId}/preview`, {
+      responseType: "blob",
+      signal,
+      headers: range ? { Range: range } : undefined,
+    });
+    const header = (name: string) => response.headers[name] as string | undefined;
+    return {
+      blob: response.data,
+      contentType: header("content-type") ?? response.data.type,
+      contentLength: header("content-length") ? Number(header("content-length")) : undefined,
+      contentRange: header("content-range"),
+      acceptRanges: header("accept-ranges"),
+      etag: header("etag"),
+      lastModified: header("last-modified"),
+    };
   },
 };
